@@ -13,6 +13,7 @@ import general_tools
 
 import logging
 
+# prepare logging (File logger: see below META VARIABLES)
 logger = logging.getLogger('PrepTCDTIMIT')
 logger.setLevel(logging.DEBUG)
 FORMAT = '[$BOLD%(filename)s$RESET:%(lineno)d][%(levelname)-5s]: %(message)s '
@@ -24,26 +25,27 @@ ch.setLevel(logging.DEBUG)
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
-# File logger: see below META VARIABLES
 
 
-##### SCRIPT META VARIABLES #####
+#####  META VARIABLES #####
 DEBUG = False
 debug_size = 50
 
 # TODO:  MODIFY THESE PARAMETERS for other nbPhonemes of mfccTypes. Save location is updated automatically.
-nbMFCCs = 39  # 13 => just mfcc (13 features). 26 => also derivative (26 features). 39 => also 2nd derivative (39 features)
+nbMFCCs = 39                            # 13 => just mfcc (13 features). 26 => also derivative (26 features). 39 => also 2nd derivative (39 features)
+
+# set phoneme type and get dictionary with phoneme-number mappings
 nbPhonemes = 39
 phoneme_set_list = phoneme_set_39_list  # import list of phonemes,
-# convert to dictionary with number mappings (see phoneme_set.py)
 values = [i for i in range(0, len(phoneme_set_list))]
 phoneme_classes = dict(zip(phoneme_set_list, values))
 
-############### DATA LOCATIONS  ###################
-dataPreSplit = True  # some datasets have a pre-defined TEST set (eg TIMIT)
-FRAC_VAL = 0.1  # fraction of training data to be used for validation
-root = os.path.expanduser("~/TCDTIMIT/audioSR/")  # ( keep the trailing slash)
+##### DATA Settings #####
 
+FRAC_VAL = 0.1  # fraction of training data to be used for validation
+
+root = os.path.expanduser("~/TCDTIMIT/audioSR/")  # (keep the trailing slash)
+dataPreSplit = True  # some datasets have a pre-defined TEST set (eg TIMIT). Set the dataset name below
 
 if dataPreSplit:
     dataset = "TIMIT"  # eg TIMIT. You can also manually split up TCDTIMIT according to train/test split in Harte, N.; Gillen, E., "TCD-TIMIT: An Audio-Visual Corpus of Continuous Speech," doi: 10.1109/TMM.2015.2407694
@@ -52,14 +54,21 @@ if dataPreSplit:
     train_source_path = os.path.join(dataRootDir, 'TRAIN')
     test_source_path = os.path.join(dataRootDir, 'TEST')
     outputDir = root + dataset + "/binary2" + str(nbPhonemes) + os.sep + dataset
+
 else:
-    ## just a bunch of wav and phn files, not split up in train and test -> create the split yourself.
+    ## just a bunch of wav and phn files, not split up in train and test -> need to create the split yourself.
     dataset = "TCDTIMIT"
     dataRootDir = root + dataset + "/fixed" + str(nbPhonemes) + "_nonSplit" + os.sep + dataset
     outputDir = root + dataset + "/binary" + str(nbPhonemes) + os.sep + os.path.basename(dataRootDir)
-    FRAC_TRAINING = 0.9  # TOTAL = TRAINING + TEST = TRAIN + VALIDATION + TEST
+    # TOTAL = TRAINING + TEST = TRAIN + VALIDATION + TEST
+    FRAC_TEST = 0.1
+    FRAC_TRAINING = 1 - FRAC_TEST # val set will be FRAC_TRAINING * FRAC_VAL = 9% of the data. FRAC_TRAIN is 90 - 9 = 81%, test = 10
 
-### store path
+
+##### Everything below is calculated automatically ##########
+#############################################################
+
+# store path
 target = os.path.join(outputDir, os.path.basename(dataRootDir) + '_' + str(nbMFCCs) + '_ch');
 target_path = target + '.pkl'
 if not os.path.exists(outputDir):

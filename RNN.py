@@ -6,7 +6,7 @@ from time import gmtime, strftime
 warnings.simplefilter("ignore", UserWarning)  # cuDNN warning
 
 import logging
-import formatting
+import tools.formatting as formatting
 
 logger_RNN = logging.getLogger('audioSR')
 logger_RNN.setLevel(logging.DEBUG)
@@ -31,33 +31,27 @@ from RNN_implementation import *
 
 ##### SCRIPT META VARIABLES #####
 VERBOSE = True
-
-# batch sizes: see just above training loop
 num_epochs = 20
-
 nbMFCCs = 39  # num of features to use -> see 'utils.py' in convertToPkl under processDatabase
 nbPhonemes = 39  # number output neurons
 
+# Root path:  data is stored here, models and results will be stored here as well
+# see README.md for info about where you should store your data
+root = os.path.expanduser("~/TCDTIMIT/audioSR/")
+
 # for each dataset type as key this dictionary contains as value a list of all the network architectures that need to be trained for this dataset
 MANY_N_HIDDEN_LISTS = {}
-MANY_N_HIDDEN_LISTS['TIMIT'] = [[256, 256, 256, 256]]
-# [8, 8], [8, 8, 8], [8, 8, 8, 8], [8, 8, 8, 8, 8, 8, 8, 8],
-#  [32, 32], [32, 32, 32], [32, 32, 32, 32],
-#  [64, 64], [64, 64, 64], [64, 64, 64, 64],
-#  [256, 256], [256, 256, 256], [256, 256, 256, 256],
-#  [512, 512], [512, 512, 512], [512, 512, 512, 512]]
-
-
-MANY_N_HIDDEN_LISTS['TCDTIMIT'] = [[256, 256]]  # [32,32],[64,64],[256,256]]#,[512,512]]
+MANY_N_HIDDEN_LISTS['TIMIT'] = [[256, 256]] # [256, 256, 256], [256, 256, 256, 256],
+MANY_N_HIDDEN_LISTS['TCDTIMIT'] = [[256, 256],[512,512],[256,256,256,256]]
 # combined is TIMIT and TCDTIMIT put together
 MANY_N_HIDDEN_LISTS['combined'] = [[256, 256]]  # [32, 32], [64, 64], [256, 256]]#, [512, 512]]
 
 #######################
 
-BIDIRECTIONAL = False
+BIDIRECTIONAL = True
 ADD_DENSE_LAYERS = False
 
-justTest = False
+justTest = True
 
 # Decaying LR: each epoch LR = LR * LR_decay
 LR_start = 0.01 # will be divided by 10 if retraining existing model
@@ -78,7 +72,7 @@ def main():
     # global  justTest, withNoise, noiseTypes, ratio_dBs
 
     # Choose which datasets to run
-    datasets = ["TIMIT"]  # "TCDTIMIT", combined"
+    datasets = ["TCDTIMIT"]  # "TIMIT", combined"
 
     # choose which data to use as test set
     test_datasets = {}
@@ -97,12 +91,6 @@ def main():
     for dataset in datasets:
         for N_HIDDEN_LIST in MANY_N_HIDDEN_LISTS[dataset]:
             ##### BUIDING MODEL #####
-            # if N_HIDDEN_LIST[0] > 128:
-            #     batch_sizes = [64, 32, 16, 8, 4]
-            # elif N_HIDDEN_LIST[0] > 64:
-            #     batch_sizes = [128, 64, 32, 16, 8, 4]
-            # else:
-            #     batch_sizes = [256, 128, 64, 32, 16, 8, 4]
             if N_HIDDEN_LIST[0] > 128:
                 batch_sizes = [64, 32, 16, 8, 4]
             elif N_HIDDEN_LIST[0] > 64:
@@ -158,7 +146,7 @@ def main():
 
 # this generates the correct path based on the chosen parameters, and gets the train/val/test data
 def loadData(dataset, test_dataset, withNoise=False, noiseType=None, ratio_dB=None):
-    root = os.path.expanduser("~/TCDTIMIT/audioSR/")
+
     dataDir = root + dataset + "/binary" + str(nbPhonemes) + os.sep + dataset  # output dir from datasetToPkl.py
     data_path = os.path.join(dataDir, dataset + '_' + str(nbMFCCs) + '_ch.pkl');
     if justTest:
@@ -210,7 +198,7 @@ def loadData(dataset, test_dataset, withNoise=False, noiseType=None, ratio_dB=No
 
 # this builds the chosen network architecture, loads network weights and compiles the functions
 def setupNetwork(dataset, test_dataset, N_HIDDEN_LIST, batch_size, ROUND_PARAMS=False):
-    root = os.path.expanduser("~/TCDTIMIT/audioSR/")
+
     store_dir = root + dataset + "/results"
     if not os.path.exists(store_dir): os.makedirs(store_dir)
 
